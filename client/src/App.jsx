@@ -30,6 +30,8 @@ function App() {
   const [roomData, setRoomData] = useState(null);
   const [myColor, setMyColor] = useState(null);
   const [error, setError] = useState('');
+  const { room: urlRoom, pwd: urlPwd } = getUrlParams();
+  const [loading, setLoading] = useState(!!urlRoom && !!urlPwd);
 
   const persistentId = getPersistentId();
 
@@ -38,15 +40,15 @@ function App() {
 
     socket.on('room-joined', (data) => {
       setRoomData(data);
+      setLoading(false);
       setError('');
       const myPlayer = data.players[socket.id];
-      if (myPlayer?.color) {
-        setMyColor(myPlayer.color);
-      }
+      if (myPlayer?.color) setMyColor(myPlayer.color);
     });
 
     socket.on('join-error', (msg) => {
       setError(msg);
+      setLoading(false);
       clearUrlParams();
     });
 
@@ -95,6 +97,10 @@ function App() {
   const handlePickColor = (color) => socket.emit('pick-color', { color });
   const handleToggleCell = (rowIndex, colIndex) => socket.emit('toggle-cell', { rowIndex, colIndex });
   const handleReset = () => socket.emit('reset-table');
+
+  if (loading) {
+    return <div className="loading">連線中...</div>;
+  }
 
   if (!roomData) {
     return <LandingPage onJoin={handleJoin} error={error} />;

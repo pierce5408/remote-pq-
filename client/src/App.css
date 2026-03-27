@@ -11,6 +11,16 @@ body {
   min-height: 100vh;
 }
 
+/* ── Loading ── */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  color: #aaa;
+  font-size: 1rem;
+}
+
 /* ── Landing ── */
 .landing {
   display: flex;
