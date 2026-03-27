@@ -28,29 +28,25 @@ function App() {
     socket.on('room-joined', (data) => {
       setRoomData(data);
       setError('');
-
-      // Auto re-pick saved color if available
-      const savedColor = sessionStorage.getItem('myColor');
-      if (savedColor) {
-        const alreadyTaken = Object.entries(data.players)
-          .some(([id, p]) => p.color === savedColor && id !== socket.id);
-        if (!alreadyTaken) {
-          socket.emit('pick-color', { color: savedColor });
-        }
+      // Server already assigned color if preferredColor was passed
+      const myPlayer = data.players[socket.id];
+      if (myPlayer?.color) {
+        setMyColor(myPlayer.color);
       }
     });
 
     socket.on('join-error', (msg) => {
       setError(msg);
       clearUrlParams();
-      sessionStorage.clear();
+      sessionStorage.removeItem('myColor');
     });
 
     socket.on('players-updated', (players) => {
       setRoomData(prev => prev ? { ...prev, players } : prev);
-      if (players[socket.id]?.color) {
-        setMyColor(players[socket.id].color);
-        sessionStorage.setItem('myColor', players[socket.id].color);
+      const color = players[socket.id]?.color;
+      if (color) {
+        setMyColor(color);
+        sessionStorage.setItem('myColor', color);
       }
     });
 
@@ -58,10 +54,11 @@ function App() {
       setRoomData(prev => prev ? { ...prev, table } : prev);
     });
 
-    // Auto-join from URL params after all listeners are registered
+    // Auto-join from URL params
     const { room, pwd } = getUrlParams();
     if (room && pwd) {
-      const doJoin = () => socket.emit('join-room', { roomId: room, password: pwd });
+      const preferredColor = sessionStorage.getItem('myColor') || undefined;
+      const doJoin = () => socket.emit('join-room', { roomId: room, password: pwd, preferredColor });
       if (socket.connected) {
         doJoin();
       } else {

@@ -28,7 +28,7 @@ function getRoomState(roomId) {
 io.on('connection', (socket) => {
   console.log('connected:', socket.id);
 
-  socket.on('join-room', ({ roomId, password }) => {
+  socket.on('join-room', ({ roomId, password, preferredColor }) => {
     if (!rooms[roomId]) {
       rooms[roomId] = {
         password,
@@ -50,7 +50,14 @@ io.on('connection', (socket) => {
 
     socket.join(roomId);
     socket.roomId = roomId;
-    rooms[roomId].players[socket.id] = { color: null };
+
+    // Auto-assign preferred color if not taken
+    let assignedColor = null;
+    if (preferredColor) {
+      const taken = Object.values(rooms[roomId].players).some(p => p.color === preferredColor);
+      if (!taken) assignedColor = preferredColor;
+    }
+    rooms[roomId].players[socket.id] = { color: assignedColor };
 
     socket.emit('room-joined', { roomId, ...getRoomState(roomId) });
     io.to(roomId).emit('players-updated', rooms[roomId].players);
