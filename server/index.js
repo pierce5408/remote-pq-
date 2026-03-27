@@ -11,28 +11,24 @@ const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
-// { roomId: { password, players: { socketId: { color } }, table: (string|null)[][] } }
-// table[10][4]: 10 rows x 4 cols, value = color string or null
+// rooms[roomId] = { password, players, colorMap, table }
+// colorMap: { persistentId -> color }  — survives reconnects
 const rooms = {};
-
-const COLORS = ['red', 'blue', 'green', 'yellow'];
 
 function getRoomState(roomId) {
   const room = rooms[roomId];
-  return {
-    players: room.players,
-    table: room.table
-  };
+  return { players: room.players, table: room.table };
 }
 
 io.on('connection', (socket) => {
   console.log('connected:', socket.id);
 
-  socket.on('join-room', ({ roomId, password, preferredColor }) => {
+  socket.on('join-room', ({ roomId, password, persistentId }) => {
     if (!rooms[roomId]) {
       rooms[roomId] = {
         password,
         players: {},
+        colorMap: {},
         table: Array(10).fill(null).map(() => Array(4).fill(null))
       };
     }
@@ -50,12 +46,16 @@ io.on('connection', (socket) => {
 
     socket.join(roomId);
     socket.roomId = roomId;
+    socket.persistentId = persistentId;
 
-    // Auto-assign preferred color if not taken
+    // Restore color from colorMap if available and not taken by someone else
     let assignedColor = null;
-    if (preferredColor) {
-      const taken = Object.values(rooms[roomId].players).some(p => p.color === preferredColor);
-      if (!taken) assignedColor = preferredColor;
+    if (persistentId) {
+      const saved = rooms[roomId].colorMap[persistentId];
+      if (saved) {
+        const taken = Object.values(rooms[roomId].players).some(p => p.color === saved);
+        if (!taken) assignedColor = saved;
+      }
     }
     rooms[roomId].players[socket.id] = { color: assignedColor };
 
@@ -67,7 +67,6 @@ io.on('connection', (socket) => {
     const roomId = socket.roomId;
     if (!roomId || !rooms[roomId]) return;
 
-    // Check if taken by someone else
     const takenByOther = Object.entries(rooms[roomId].players)
       .some(([id, p]) => p.color === color && id !== socket.id);
     if (takenByOther) {
@@ -88,6 +87,12 @@ io.on('connection', (socket) => {
     }
 
     rooms[roomId].players[socket.id].color = color;
+
+    // Save to colorMap for reconnect
+    if (socket.persistentId) {
+      rooms[roomId].colorMap[socket.persistentId] = color;
+    }
+
     io.to(roomId).emit('players-updated', rooms[roomId].players);
   });
 
@@ -99,7 +104,6 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('table-updated', rooms[roomId].table);
   });
 
-  // toggle-cell: rowIndex (0-9), colIndex (0-3)
   socket.on('toggle-cell', ({ rowIndex, colIndex }) => {
     const roomId = socket.roomId;
     if (!roomId || !rooms[roomId]) return;
@@ -110,14 +114,10 @@ io.on('connection', (socket) => {
     const table = rooms[roomId].table;
     const cell = table[rowIndex][colIndex];
 
-    // Clear existing selection by this player in the same row only
     for (let c = 0; c < table[rowIndex].length; c++) {
-      if (table[rowIndex][c] === player.color) {
-        table[rowIndex][c] = null;
-      }
+      if (table[rowIndex][c] === player.color) table[rowIndex][c] = null;
     }
 
-    // If the clicked cell wasn't theirs → claim it; if it was → just clear (toggle off)
     if (cell !== player.color) {
       table[rowIndex][colIndex] = player.color;
     }

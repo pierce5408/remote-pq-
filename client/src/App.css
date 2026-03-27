@@ -125,6 +125,32 @@ body {
   padding-bottom: 1rem;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.btn-back {
+  background: transparent;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  color: #aaa;
+  font-size: 1.1rem;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-back:hover {
+  border-color: #e94560;
+  color: #e94560;
+}
+
 .room-header h2 {
   font-size: 1.4rem;
   color: #e94560;

@@ -17,10 +17,21 @@ function clearUrlParams() {
   window.history.replaceState(null, '', window.location.pathname);
 }
 
+function getPersistentId() {
+  let id = localStorage.getItem('persistentId');
+  if (!id) {
+    id = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    localStorage.setItem('persistentId', id);
+  }
+  return id;
+}
+
 function App() {
   const [roomData, setRoomData] = useState(null);
   const [myColor, setMyColor] = useState(null);
   const [error, setError] = useState('');
+
+  const persistentId = getPersistentId();
 
   useEffect(() => {
     socket.connect();
@@ -28,7 +39,6 @@ function App() {
     socket.on('room-joined', (data) => {
       setRoomData(data);
       setError('');
-      // Server already assigned color if preferredColor was passed
       const myPlayer = data.players[socket.id];
       if (myPlayer?.color) {
         setMyColor(myPlayer.color);
@@ -38,16 +48,12 @@ function App() {
     socket.on('join-error', (msg) => {
       setError(msg);
       clearUrlParams();
-      sessionStorage.removeItem('myColor');
     });
 
     socket.on('players-updated', (players) => {
       setRoomData(prev => prev ? { ...prev, players } : prev);
       const color = players[socket.id]?.color;
-      if (color) {
-        setMyColor(color);
-        sessionStorage.setItem('myColor', color);
-      }
+      if (color) setMyColor(color);
     });
 
     socket.on('table-updated', (table) => {
@@ -57,13 +63,9 @@ function App() {
     // Auto-join from URL params
     const { room, pwd } = getUrlParams();
     if (room && pwd) {
-      const preferredColor = sessionStorage.getItem('myColor') || undefined;
-      const doJoin = () => socket.emit('join-room', { roomId: room, password: pwd, preferredColor });
-      if (socket.connected) {
-        doJoin();
-      } else {
-        socket.once('connect', doJoin);
-      }
+      const doJoin = () => socket.emit('join-room', { roomId: room, password: pwd, persistentId });
+      if (socket.connected) doJoin();
+      else socket.once('connect', doJoin);
     }
 
     return () => {
@@ -78,20 +80,21 @@ function App() {
   const handleJoin = (roomId, password) => {
     setError('');
     setUrlParams(roomId, password);
-    socket.emit('join-room', { roomId, password });
+    socket.emit('join-room', { roomId, password, persistentId });
   };
 
-  const handlePickColor = (color) => {
-    socket.emit('pick-color', { color });
+  const handleLeave = () => {
+    socket.disconnect();
+    setRoomData(null);
+    setMyColor(null);
+    setError('');
+    clearUrlParams();
+    socket.connect();
   };
 
-  const handleToggleCell = (rowIndex, colIndex) => {
-    socket.emit('toggle-cell', { rowIndex, colIndex });
-  };
-
-  const handleReset = () => {
-    socket.emit('reset-table');
-  };
+  const handlePickColor = (color) => socket.emit('pick-color', { color });
+  const handleToggleCell = (rowIndex, colIndex) => socket.emit('toggle-cell', { rowIndex, colIndex });
+  const handleReset = () => socket.emit('reset-table');
 
   if (!roomData) {
     return <LandingPage onJoin={handleJoin} error={error} />;
@@ -105,6 +108,7 @@ function App() {
       onPickColor={handlePickColor}
       onToggleCell={handleToggleCell}
       onReset={handleReset}
+      onLeave={handleLeave}
       error={error}
     />
   );

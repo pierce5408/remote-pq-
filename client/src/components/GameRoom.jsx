@@ -7,7 +7,7 @@ const COLOR_STYLES = {
   yellow: { bg: '#F1C40F', label: '黃色' },
 };
 
-export default function GameRoom({ roomData, myColor, mySocketId, onPickColor, onToggleCell, onReset, error }) {
+export default function GameRoom({ roomData, myColor, mySocketId, onPickColor, onToggleCell, onReset, onLeave, error }) {
   const { roomId, players, table } = roomData;
 
   const playerCount = Object.keys(players).length;
@@ -26,7 +26,10 @@ export default function GameRoom({ roomData, myColor, mySocketId, onPickColor, o
     <div className="room-page">
     <div className="room-card room">
       <header className="room-header">
-        <h2>房間 #{roomId}</h2>
+        <div className="header-left">
+          <button className="btn-back" onClick={onLeave} title="返回">&#8592;</button>
+          <h2>房間 #{roomId}</h2>
+        </div>
         <span className="player-count">{playerCount} / 4 人</span>
       </header>
 
