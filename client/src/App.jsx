@@ -21,37 +21,36 @@ function App() {
   const [roomData, setRoomData] = useState(null);
   const [myColor, setMyColor] = useState(null);
   const [error, setError] = useState('');
-  const [pendingJoin, setPendingJoin] = useState(null);
 
   useEffect(() => {
     socket.connect();
 
-    socket.on('connect', () => {
-      // Auto-join from URL params after socket connects
-      const { room, pwd } = getUrlParams();
-      if (room && pwd) {
-        socket.emit('join-room', { roomId: room, password: pwd });
-      }
-    });
-
     socket.on('room-joined', (data) => {
       setRoomData(data);
       setError('');
-      if (pendingJoin) {
-        setUrlParams(pendingJoin.roomId, pendingJoin.password);
-        setPendingJoin(null);
+
+      // Auto re-pick saved color if available
+      const savedColor = sessionStorage.getItem('myColor');
+      if (savedColor) {
+        const alreadyTaken = Object.entries(data.players)
+          .some(([id, p]) => p.color === savedColor && id !== socket.id);
+        if (!alreadyTaken) {
+          socket.emit('pick-color', { color: savedColor });
+        }
       }
     });
 
     socket.on('join-error', (msg) => {
       setError(msg);
       clearUrlParams();
+      sessionStorage.clear();
     });
 
     socket.on('players-updated', (players) => {
       setRoomData(prev => prev ? { ...prev, players } : prev);
-      if (players[socket.id]) {
+      if (players[socket.id]?.color) {
         setMyColor(players[socket.id].color);
+        sessionStorage.setItem('myColor', players[socket.id].color);
       }
     });
 
@@ -59,8 +58,18 @@ function App() {
       setRoomData(prev => prev ? { ...prev, table } : prev);
     });
 
+    // Auto-join from URL params after all listeners are registered
+    const { room, pwd } = getUrlParams();
+    if (room && pwd) {
+      const doJoin = () => socket.emit('join-room', { roomId: room, password: pwd });
+      if (socket.connected) {
+        doJoin();
+      } else {
+        socket.once('connect', doJoin);
+      }
+    }
+
     return () => {
-      socket.off('connect');
       socket.off('room-joined');
       socket.off('join-error');
       socket.off('players-updated');
@@ -71,7 +80,7 @@ function App() {
 
   const handleJoin = (roomId, password) => {
     setError('');
-    setPendingJoin({ roomId, password });
+    setUrlParams(roomId, password);
     socket.emit('join-room', { roomId, password });
   };
 

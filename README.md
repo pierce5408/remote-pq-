@@ -2,28 +2,40 @@
 
 Artale MapleStory Romeo & Juliet Party Quest 跳箱路徑規劃網頁，支援最多 4 人即時同步協調。
 
+**線上網址**：https://pierce5408.github.io/remote-pq-/
+
 ---
 
-## 專案需求
+## 功能
 
-### 核心功能
+### 房間系統
+- 輸入房間號碼與密碼建立或加入房間（最多 4 人）
+- 加入後網址自動帶入房間資訊（`?room=xxxx&pwd=xxxx`），重新整理不需重新輸入
 
-- **房間系統**：輸入房間號碼與密碼建立或加入房間，最多 4 人同時進入
-- **顏色選擇**：進房後從紅、藍、綠、黃四色中選擇一個作為自己的識別色，已被佔用的顏色無法選取
-- **跳箱規劃表**：10 × 4 表格，代表 10 層箱子 × 4 個位置
-  - 每格顯示位置編號（1–4）
-  - 點擊格子填滿自己的顏色（再點取消）
-  - 每層最多選一格，點新格子自動取代舊的
-  - 其他玩家已選的格子無法點擊
-  - 表格由下至上顯示（第 1 層在最下方，第 10 層在最上方）
-- **路徑摘要**：即時顯示自己選擇的路徑，格式為位置號碼序列，前 5 個與後 5 個以 `-` 分隔
-- **即時同步**：所有操作透過 WebSocket 即時同步給同房間所有玩家
+### 顏色選擇
+- 進房後從紅、藍、綠、黃四色中選擇識別色
+- 已被他人佔用的顏色無法選取
+- 可隨時切換未被佔用的顏色，切換時自動清除舊格子
+
+### 跳箱規劃表
+- 10 × 4 表格，代表 10 層箱子 × 4 個位置
+- 表格由下至上顯示（第 1 層在最下，第 10 層在最上）
+- 點擊格子填滿自己的顏色，再點一次取消
+- 每層最多選一格，點新格自動取代舊的
+- 他人已選的格子無法點擊
+- 重置按鈕：清空所有格子，顏色保留
+
+### 路徑摘要
+- 即時顯示自己選擇的路徑（位置號碼序列）
+- 前 5 個與後 5 個以 `-` 分隔
+
+### 即時同步
+- 所有操作透過 WebSocket 即時同步給同房間所有玩家
 
 ### UI / UX
-
 - 深色遊戲風格介面
 - 房間內容以 Border 卡片置中呈現
-- RWD 支援手機瀏覽（breakpoint: 480px）
+- RWD 支援手機瀏覽
 
 ---
 
@@ -46,7 +58,8 @@ romeo/
 │       └── components/
 │           ├── LandingPage.jsx
 │           └── GameRoom.jsx
-└── dev.sh           # 一鍵啟動腳本
+├── dev.sh           # 本地開發一鍵啟動
+└── deploy.sh        # 一鍵部署腳本
 ```
 
 ### Frontend
@@ -56,7 +69,7 @@ romeo/
 | 框架 | React 18 |
 | 建置工具 | Vite 5 |
 | WebSocket | socket.io-client 4 |
-| 部署 | GitHub Pages（`gh-pages`） |
+| 部署 | GitHub Pages |
 
 ### Backend
 
@@ -74,21 +87,21 @@ romeo/
 | `join-room` | client → server | 加入或建立房間 |
 | `room-joined` | server → client | 加入成功，回傳房間初始狀態 |
 | `join-error` | server → client | 密碼錯誤 / 房間已滿 / 顏色已被選 |
-| `pick-color` | client → server | 選擇顏色 |
+| `pick-color` | client → server | 選擇或切換顏色 |
 | `players-updated` | server → all | 玩家狀態更新 |
 | `toggle-cell` | client → server | 點選 / 取消格子 |
 | `table-updated` | server → all | 表格狀態更新 |
+| `reset-table` | client → server | 清空所有格子 |
 
 ### 資料結構
 
 ```js
-// Server 房間狀態
 rooms[roomId] = {
   password: string,
   players: {
     [socketId]: { color: 'red' | 'blue' | 'green' | 'yellow' | null }
   },
-  table: string[10][4]  // null = 空, color string = 已選
+  table: (string|null)[10][4]  // null = 空, color string = 已選
 }
 ```
 
@@ -101,8 +114,7 @@ rooms[roomId] = {
 cd server && npm install
 cd ../client && npm install
 
-# 一鍵啟動（需回到根目錄）
-cd ..
+# 一鍵啟動（在根目錄執行）
 ./dev.sh
 ```
 
@@ -112,21 +124,10 @@ cd ..
 
 ## 部署
 
-### 後端（Render.com）
-
-1. 將 `server/` 推上 GitHub
-2. Render.com 建立 Web Service，start command 設為 `node index.js`
-
-### 前端（GitHub Pages）
-
-在 `client/` 建立 `.env.production`：
-
-```env
-VITE_SOCKET_URL=https://your-render-app.onrender.com
-VITE_BASE=/your-repo-name/
-```
-
 ```bash
-cd client
-npm run deploy
+# 一鍵部署前端（GitHub Pages）+ 後端（Render 自動更新）
+./deploy.sh
 ```
+
+- **前端**：https://pierce5408.github.io/remote-pq-/
+- **後端**：https://remote-pq.onrender.com
