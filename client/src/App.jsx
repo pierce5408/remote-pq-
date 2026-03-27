@@ -3,21 +3,49 @@ import { socket } from './socket';
 import LandingPage from './components/LandingPage';
 import GameRoom from './components/GameRoom';
 
+function getUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  return { room: params.get('room'), pwd: params.get('pwd') };
+}
+
+function setUrlParams(roomId, password) {
+  const params = new URLSearchParams({ room: roomId, pwd: password });
+  window.history.replaceState(null, '', '?' + params.toString());
+}
+
+function clearUrlParams() {
+  window.history.replaceState(null, '', window.location.pathname);
+}
+
 function App() {
-  const [roomData, setRoomData] = useState(null); // { roomId, players, table }
+  const [roomData, setRoomData] = useState(null);
   const [myColor, setMyColor] = useState(null);
   const [error, setError] = useState('');
+  const [pendingJoin, setPendingJoin] = useState(null);
 
   useEffect(() => {
     socket.connect();
 
+    socket.on('connect', () => {
+      // Auto-join from URL params after socket connects
+      const { room, pwd } = getUrlParams();
+      if (room && pwd) {
+        socket.emit('join-room', { roomId: room, password: pwd });
+      }
+    });
+
     socket.on('room-joined', (data) => {
       setRoomData(data);
       setError('');
+      if (pendingJoin) {
+        setUrlParams(pendingJoin.roomId, pendingJoin.password);
+        setPendingJoin(null);
+      }
     });
 
     socket.on('join-error', (msg) => {
       setError(msg);
+      clearUrlParams();
     });
 
     socket.on('players-updated', (players) => {
@@ -32,6 +60,7 @@ function App() {
     });
 
     return () => {
+      socket.off('connect');
       socket.off('room-joined');
       socket.off('join-error');
       socket.off('players-updated');
@@ -42,6 +71,7 @@ function App() {
 
   const handleJoin = (roomId, password) => {
     setError('');
+    setPendingJoin({ roomId, password });
     socket.emit('join-room', { roomId, password });
   };
 
@@ -51,6 +81,10 @@ function App() {
 
   const handleToggleCell = (rowIndex, colIndex) => {
     socket.emit('toggle-cell', { rowIndex, colIndex });
+  };
+
+  const handleReset = () => {
+    socket.emit('reset-table');
   };
 
   if (!roomData) {
@@ -64,6 +98,7 @@ function App() {
       mySocketId={socket.id}
       onPickColor={handlePickColor}
       onToggleCell={handleToggleCell}
+      onReset={handleReset}
       error={error}
     />
   );

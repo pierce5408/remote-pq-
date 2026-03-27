@@ -60,14 +60,36 @@ io.on('connection', (socket) => {
     const roomId = socket.roomId;
     if (!roomId || !rooms[roomId]) return;
 
-    const taken = Object.values(rooms[roomId].players).some(p => p.color === color);
-    if (taken) {
+    // Check if taken by someone else
+    const takenByOther = Object.entries(rooms[roomId].players)
+      .some(([id, p]) => p.color === color && id !== socket.id);
+    if (takenByOther) {
       socket.emit('join-error', '此顏色已被選取');
       return;
     }
 
+    // Clear old color from table when switching
+    const oldColor = rooms[roomId].players[socket.id].color;
+    if (oldColor && oldColor !== color) {
+      const table = rooms[roomId].table;
+      for (let r = 0; r < table.length; r++) {
+        for (let c = 0; c < table[r].length; c++) {
+          if (table[r][c] === oldColor) table[r][c] = null;
+        }
+      }
+      io.to(roomId).emit('table-updated', rooms[roomId].table);
+    }
+
     rooms[roomId].players[socket.id].color = color;
     io.to(roomId).emit('players-updated', rooms[roomId].players);
+  });
+
+  socket.on('reset-table', () => {
+    const roomId = socket.roomId;
+    if (!roomId || !rooms[roomId]) return;
+
+    rooms[roomId].table = Array(10).fill(null).map(() => Array(4).fill(null));
+    io.to(roomId).emit('table-updated', rooms[roomId].table);
   });
 
   // toggle-cell: rowIndex (0-9), colIndex (0-3)

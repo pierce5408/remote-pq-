@@ -249,8 +249,32 @@ body {
   align-items: center;
 }
 
-.table-section h3 {
-  align-self: flex-start;
+.table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 0.8rem;
+}
+
+.table-header h3 {
+  margin-bottom: 0;
+}
+
+.btn-reset {
+  padding: 0.35rem 0.9rem;
+  background: transparent;
+  border: 1px solid #e94560;
+  border-radius: 6px;
+  color: #e94560;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-reset:hover {
+  background: #e94560;
+  color: #fff;
 }
 
 .table-wrapper {

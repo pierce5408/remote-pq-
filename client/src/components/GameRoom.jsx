@@ -7,7 +7,7 @@ const COLOR_STYLES = {
   yellow: { bg: '#F1C40F', label: '黃色' },
 };
 
-export default function GameRoom({ roomData, myColor, mySocketId, onPickColor, onToggleCell, error }) {
+export default function GameRoom({ roomData, myColor, mySocketId, onPickColor, onToggleCell, onReset, error }) {
   const { roomId, players, table } = roomData;
 
   const playerCount = Object.keys(players).length;
@@ -38,7 +38,7 @@ export default function GameRoom({ roomData, myColor, mySocketId, onPickColor, o
             const style = COLOR_STYLES[color];
             const isMe = getColorOwner(color) === mySocketId;
             const isTaken = takenByOther(color);
-            const isDisabled = isTaken || !!myColor;
+            const isDisabled = isTaken;
 
             return (
               <button
@@ -91,7 +91,10 @@ export default function GameRoom({ roomData, myColor, mySocketId, onPickColor, o
 
       {/* 10x4 Table */}
       <section className="table-section">
-        <h3>跳箱規劃表</h3>
+        <div className="table-header">
+          <h3>跳箱規劃表</h3>
+          <button className="btn-reset" onClick={onReset}>重置</button>
+        </div>
         {!myColor && <p className="hint">選擇顏色後才能點選格子</p>}
         <div className="table-wrapper">
           <table className="jump-table">
