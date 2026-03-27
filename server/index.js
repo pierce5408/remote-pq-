@@ -33,6 +33,12 @@ io.on('connection', (socket) => {
       };
     }
 
+    // Cancel pending deletion if room was waiting to be cleaned up
+    if (rooms[roomId]._deleteTimer) {
+      clearTimeout(rooms[roomId]._deleteTimer);
+      delete rooms[roomId]._deleteTimer;
+    }
+
     if (rooms[roomId].password !== password) {
       socket.emit('join-error', '密碼錯誤');
       return;
@@ -132,8 +138,13 @@ io.on('connection', (socket) => {
     delete rooms[roomId].players[socket.id];
 
     if (Object.keys(rooms[roomId].players).length === 0) {
-      delete rooms[roomId];
-      console.log(`Room ${roomId} deleted (empty)`);
+      // Delay deletion to allow reconnects (e.g. page refresh)
+      rooms[roomId]._deleteTimer = setTimeout(() => {
+        if (rooms[roomId] && Object.keys(rooms[roomId].players).length === 0) {
+          delete rooms[roomId];
+          console.log(`Room ${roomId} deleted (empty)`);
+        }
+      }, 15000);
     } else {
       io.to(roomId).emit('players-updated', rooms[roomId].players);
     }
