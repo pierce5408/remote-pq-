@@ -37,7 +37,13 @@ function App() {
 
   const persistentId = getPersistentId();
 
+  const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+
   useEffect(() => {
+    const pingInterval = setInterval(() => {
+      fetch(SOCKET_URL).catch(() => {});
+    }, 5 * 60 * 1000);
+
     socket.connect();
 
     socket.on('room-joined', (data) => {
@@ -77,6 +83,7 @@ function App() {
     }
 
     return () => {
+      clearInterval(pingInterval);
       socket.off('room-joined');
       socket.off('join-error');
       socket.off('players-updated');
