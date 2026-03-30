@@ -94,7 +94,7 @@ export default function GameRoom({ roomData, myColor, mySocketId, onPickColor, o
           <table className="jump-table">
             <thead>
               <tr>
-                <th className="row-num-header">箱子</th>
+                <th className="row-num-header">layer\platform</th>
                 <th>1</th>
                 <th>2</th>
                 <th>3</th>
