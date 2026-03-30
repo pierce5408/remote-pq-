@@ -64,29 +64,20 @@ export default function GameRoom({ roomData, myColor, mySocketId, onPickColor, o
       {/* Selection Summary - only show my own path */}
       {myColor && (() => {
         const style = COLOR_STYLES[myColor];
-        const path = [];
-        table.forEach((row, ri) => {
-          row.forEach((cell, ci) => {
-            if (cell === myColor) path.push({ box: ri + 1, pos: ci + 1 });
-          });
+        const nums = table.map(row => {
+          const ci = row.indexOf(myColor);
+          return ci !== -1 ? ci + 1 : '?';
         });
-        path.sort((a, b) => a.box - b.box);
+        const first = nums.slice(0, 5).join(' ');
+        const second = nums.slice(5).join(' ');
+        const pathText = `${first} - ${second}`;
 
         return (
           <section className="summary-section">
             <h3>我的路徑</h3>
             <div className="summary-item">
               <span className="summary-dot" style={{ background: style.bg }} />
-              <span className="summary-text">
-                {path.length > 0
-                  ? (() => {
-                      const nums = path.map(p => p.pos);
-                      const first = nums.slice(0, 5).join(' ');
-                      const second = nums.slice(5).join(' ');
-                      return second ? `${first} - ${second}` : first;
-                    })()
-                  : '尚未選擇'}
-              </span>
+              <span className="summary-text">{pathText}</span>
             </div>
           </section>
         );
