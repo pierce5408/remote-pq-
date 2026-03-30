@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { socket } from './socket';
 import LandingPage from './components/LandingPage';
 import GameRoom from './components/GameRoom';
@@ -32,6 +32,8 @@ function App() {
   const [error, setError] = useState('');
   const { room: urlRoom, pwd: urlPwd } = getUrlParams();
   const [loading, setLoading] = useState(!!urlRoom && !!urlPwd);
+  const [joining, setJoining] = useState(false);
+  const joinTimerRef = useRef(null);
 
   const persistentId = getPersistentId();
 
@@ -39,16 +41,20 @@ function App() {
     socket.connect();
 
     socket.on('room-joined', (data) => {
+      clearTimeout(joinTimerRef.current);
       setRoomData(data);
       setLoading(false);
+      setJoining(false);
       setError('');
       const myPlayer = data.players[socket.id];
       if (myPlayer?.color) setMyColor(myPlayer.color);
     });
 
     socket.on('join-error', (msg) => {
+      clearTimeout(joinTimerRef.current);
       setError(msg);
       setLoading(false);
+      setJoining(false);
       clearUrlParams();
     });
 
@@ -81,8 +87,15 @@ function App() {
 
   const handleJoin = (roomId, password) => {
     setError('');
+    setJoining(true);
     setUrlParams(roomId, password);
     socket.emit('join-room', { roomId, password, persistentId });
+
+    joinTimerRef.current = setTimeout(() => {
+      setJoining(false);
+      setError('伺服器啟動中，請稍後再試一次（免費伺服器冷啟動需約 30 秒）');
+      clearUrlParams();
+    }, 15000);
   };
 
   const handleLeave = () => {
@@ -103,7 +116,7 @@ function App() {
   }
 
   if (!roomData) {
-    return <LandingPage onJoin={handleJoin} error={error} />;
+    return <LandingPage onJoin={handleJoin} error={error} joining={joining} />;
   }
 
   return (

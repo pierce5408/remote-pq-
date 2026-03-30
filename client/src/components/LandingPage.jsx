@@ -1,12 +1,12 @@
 import { useState } from 'react';
 
-export default function LandingPage({ onJoin, error }) {
+export default function LandingPage({ onJoin, error, joining }) {
   const [roomId, setRoomId] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!roomId.trim() || !password.trim()) return;
+    if (!roomId.trim() || !password.trim() || joining) return;
     onJoin(roomId.trim(), password.trim());
   };
 
@@ -24,6 +24,7 @@ export default function LandingPage({ onJoin, error }) {
               value={roomId}
               onChange={e => setRoomId(e.target.value)}
               maxLength={20}
+              disabled={joining}
             />
           </div>
           <div className="field">
@@ -34,10 +35,13 @@ export default function LandingPage({ onJoin, error }) {
               value={password}
               onChange={e => setPassword(e.target.value)}
               maxLength={30}
+              disabled={joining}
             />
           </div>
           {error && <p className="error">{error}</p>}
-          <button type="submit" className="btn-primary">加入 / 建立房間</button>
+          <button type="submit" className="btn-primary" disabled={joining}>
+            {joining ? '連線中...' : '加入 / 建立房間'}
+          </button>
         </form>
       </div>
     </div>
