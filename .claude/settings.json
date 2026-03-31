@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": ["Bash(python3:*)"]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport json, sys, os\ndata = json.loads(sys.stdin.read())\ncwd = data.get('cwd', os.getcwd())\nparts = []\nfor f in ['README.md', 'ARCHITECTURE.md']:\n    p = os.path.join(cwd, f)\n    if os.path.exists(p):\n        parts.append('## ' + f + '\\n\\n' + open(p).read().strip())\nctx = '\\n\\n---\\n\\n'.join(parts)\nif ctx:\n    print(json.dumps({'hookSpecificOutput': {'hookEventName': 'SessionStart', 'additionalContext': ctx}}))\n\"",
+            "statusMessage": "Loading project onboarding context..."
+          }
+        ]
+      }
+    ]
+  }
+}
